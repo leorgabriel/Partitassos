@@ -23,16 +23,104 @@ function openNextFromQueue() {
 }
 
 const NEW_TAG = '__new__';
-function fillTagSelect() {
-  const sel = document.getElementById('save-tag-select');
+function fillTagSelect(selId = 'save-tag-select', inputId = 'save-tag') {
+  const sel = document.getElementById(selId);
   const esc = (t) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   sel.innerHTML = '<option value="">Sem pasta</option>' +
     Library.allTags(libraryItems).map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('') +
     `<option value="${NEW_TAG}">➕ Criar nova pasta...</option>`;
   sel.value = '';
-  const input = document.getElementById('save-tag');
+  const input = document.getElementById(inputId);
   input.value = '';
   input.hidden = true;
+}
+
+// ---- Importação em massa ----
+let bulkFiles = [];
+function openBulkModal(files) {
+  bulkFiles = files;
+  document.getElementById('bulk-count').textContent = `${files.length} imagens selecionadas`;
+  fillTagSelect('bulk-tag-select', 'bulk-tag');
+  document.getElementById('bulk-status').value = 'quero aprender';
+  document.getElementById('bulk-progress').textContent = '';
+  document.getElementById('bulk-confirm').disabled = false;
+  document.getElementById('bulk-modal').hidden = false;
+}
+
+// Reduz a imagem (lado maior 1800px, JPEG) para não estourar o armazenamento do tablet.
+function shrinkImage(file, maxSide = 1800) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+function setupBulkImport() {
+  document.getElementById('bulk-cancel').onclick = () => {
+    document.getElementById('bulk-modal').hidden = true;
+    bulkFiles = [];
+  };
+  document.getElementById('bulk-confirm').onclick = async () => {
+    const v = document.getElementById('bulk-tag-select').value;
+    const tag = v === NEW_TAG ? document.getElementById('bulk-tag').value.trim() : v;
+    const status = document.getElementById('bulk-status').value;
+    const btn = document.getElementById('bulk-confirm');
+    const progress = document.getElementById('bulk-progress');
+    btn.disabled = true;
+    let ok = 0, failed = 0;
+    for (let i = 0; i < bulkFiles.length; i++) {
+      progress.textContent = `Importando ${i + 1} de ${bulkFiles.length}...`;
+      const file = bulkFiles[i];
+      try {
+        const dataUrl = await shrinkImage(file);
+        if (!dataUrl) throw new Error('imagem inválida');
+        await Library._save(dataUrl, {
+          title: file.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim() || 'Sem título',
+          artist: '', tag, status
+        });
+        ok++;
+      } catch (err) {
+        failed++;
+      }
+    }
+    bulkFiles = [];
+    document.getElementById('bulk-modal').hidden = true;
+    if (failed) alert(`${ok} importada(s). ${failed} não puderam ser importadas.`);
+    switchTab('library');
+  };
+}
+
+// ---- Botão X nos campos de texto ----
+function setupClearButtons() {
+  document.querySelectorAll('input[type="text"]').forEach((input) => {
+    if (!input.placeholder) input.placeholder = ' ';
+    const wrap = document.createElement('span');
+    wrap.className = 'clearable';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'clear-btn';
+    btn.setAttribute('aria-label', 'Apagar texto');
+    btn.textContent = '✕';
+    btn.onclick = () => {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    };
+    wrap.appendChild(btn);
+  });
 }
 
 let previewResult = null;
@@ -104,7 +192,7 @@ function applyLibraryFilter() {
       <img src="${item.image}">
       <div class="card-label">${item.title}${item.artist ? ' - ' + item.artist : ''}</div>
       <div class="card-tag">${item.tag ? item.tag + ' · ' : ''}${item.status}</div>`;
-    card.onclick = (e) => Viewer.open(item.image);
+    card.onclick = (e) => Viewer.open(item.image, item.title);
     card.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(item); };
     grid.appendChild(card);
   }
@@ -175,16 +263,21 @@ function init() {
   };
   document.getElementById('gallery-input').onchange = (e) => {
     const files = Array.from(e.target.files || []);
-    saveQueue.push(...files.map((file) => ({ type: 'file', data: file })));
     e.target.value = '';
+    if (files.length > 1) return openBulkModal(files);
+    saveQueue.push(...files.map((file) => ({ type: 'file', data: file })));
     openNextFromQueue();
   };
 
-  document.getElementById('save-tag-select').onchange = (e) => {
-    const input = document.getElementById('save-tag');
-    input.hidden = e.target.value !== NEW_TAG;
-    if (!input.hidden) input.focus();
-  };
+  for (const [selId, inputId] of [['save-tag-select', 'save-tag'], ['bulk-tag-select', 'bulk-tag']]) {
+    document.getElementById(selId).onchange = (e) => {
+      const input = document.getElementById(inputId);
+      input.hidden = e.target.value !== NEW_TAG;
+      if (!input.hidden) input.focus();
+    };
+  }
+  setupBulkImport();
+  setupClearButtons();
   document.getElementById('preview-cancel').onclick = () => {
     document.getElementById('preview-modal').hidden = true;
   };

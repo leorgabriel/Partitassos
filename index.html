@@ -64,6 +64,7 @@
   <div class="viewer-top">
     <button id="viewer-close" class="btn icon-btn">✕</button>
     <div class="viewer-top-actions">
+      <button id="viewer-download" class="btn icon-btn" title="Salvar na galeria do tablet">💾</button>
       <button id="viewer-theme" class="btn icon-btn" title="Alternar fundo">🌙</button>
       <button id="viewer-scroll" class="btn icon-btn" title="Rolagem automática">▶️</button>
     </div>
@@ -87,13 +88,35 @@
   </div>
 </div>
 
+<div id="bulk-modal" class="modal" hidden>
+  <div class="modal-box">
+    <h2>Importar várias partituras</h2>
+    <p id="bulk-count"></p>
+    <p class="hint">O nome de cada arquivo vira o título. A pasta e o status abaixo valem para todas.</p>
+    <label>Pasta/Tag</label>
+    <select id="bulk-tag-select"></select>
+    <input id="bulk-tag" type="text" placeholder="Nome da nova pasta" hidden>
+    <label>Status</label>
+    <select id="bulk-status">
+      <option value="quero aprender">Quero aprender</option>
+      <option value="aprendendo">Aprendendo</option>
+      <option value="aprendida">Aprendida</option>
+    </select>
+    <p id="bulk-progress" class="status"></p>
+    <div class="modal-actions">
+      <button id="bulk-cancel" class="btn">Cancelar</button>
+      <button id="bulk-confirm" class="btn primary">Importar</button>
+    </div>
+  </div>
+</div>
+
 <div id="save-modal" class="modal" hidden>
   <div class="modal-box">
     <h2>Salvar partitura</h2>
     <label>Música</label>
-    <input id="save-title" type="text">
+    <input id="save-title" type="text" placeholder=" ">
     <label>Artista</label>
-    <input id="save-artist" type="text">
+    <input id="save-artist" type="text" placeholder=" ">
     <label>Pasta/Tag</label>
     <select id="save-tag-select"></select>
     <input id="save-tag" type="text" placeholder="Nome da nova pasta" hidden>

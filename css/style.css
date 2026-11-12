@@ -170,7 +170,19 @@ body {
 .preview-img-wrap { max-height: 70vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: #eee; }
 .preview-img-wrap img { width: 100%; display: block; }
 .lib-toolbar { flex-wrap: wrap; }
-.lib-toolbar input { flex-basis: 100%; }
+.lib-toolbar .clearable { flex: 1 1 100%; }
+.clearable { position: relative; display: block; width: 100%; }
+.clearable:has(input[hidden]) { display: none; }
+.clearable input { width: 100%; padding-right: 44px; }
+.clear-btn {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border: none; border-radius: 50%;
+  background: #e8dccb; color: var(--wood-dark); font-size: 1rem; cursor: pointer;
+}
+.clear-btn:active { background: #d4c2a8; }
+.clearable input:placeholder-shown ~ .clear-btn { display: none; }
+.modal-box .clearable input { margin-top: 4px; }
+.modal-box .clearable .clear-btn { top: calc(50% + 2px); }
 
 @media (max-width: 480px) {
   #search-results { grid-template-columns: repeat(2, 1fr); }

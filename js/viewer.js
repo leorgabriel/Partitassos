@@ -11,12 +11,29 @@ const Viewer = {
     this.img = document.getElementById('viewer-img');
 
     document.getElementById('viewer-close').onclick = () => this.close();
+    document.getElementById('viewer-download').onclick = () => this.download();
     document.getElementById('viewer-theme').onclick = () => this.toggleTheme();
     document.getElementById('viewer-scroll').onclick = () => this.toggleAutoScroll();
     document.getElementById('viewer-speed').oninput = () => {}; // lido direto no loop
   },
 
-  open(imageSrc) {
+  download() {
+    if (!this.img.src) return;
+    const name = (this.title || 'partitura').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'partitura';
+    const ext = /^data:image\/png/.test(this.img.src) ? 'png' : 'jpg';
+    const a = document.createElement('a');
+    a.href = this.img.src;
+    a.download = `${name}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    const btn = document.getElementById('viewer-download');
+    btn.textContent = '✅';
+    setTimeout(() => { btn.textContent = '💾'; }, 1500);
+  },
+
+  open(imageSrc, title) {
+    this.title = title || '';
     this.img.src = imageSrc;
     this.el.hidden = false;
   },
