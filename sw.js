@@ -1,4 +1,4 @@
-const CACHE = 'partitassos-v8';
+const CACHE = 'partitassos-v10';
 const CORE_ASSETS = [
   './',
   './index.html',

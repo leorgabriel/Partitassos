@@ -53,6 +53,7 @@ function openEditModal(id) {
     sel.value = item.tag;
   }
   document.getElementById('edit-status').value = item.status || 'quero aprender';
+  setFavLabel(item.favorite);
   document.getElementById('edit-modal').hidden = false;
 }
 
@@ -227,32 +228,137 @@ function applyLibraryFilter() {
   const text = document.getElementById('lib-search').value;
   const tag = document.getElementById('lib-filter-tag').value;
   const status = document.getElementById('lib-filter-status').value;
-  const filtered = Library.filter(libraryItems, text, tag, status);
+  const filtered = Library.filter(libraryItems, text, tag, status, favOnly);
   const grid = document.getElementById('library-results');
   grid.innerHTML = '';
   document.getElementById('library-empty').hidden = libraryItems.length > 0;
+  if (libraryItems.length && !filtered.length) {
+    grid.innerHTML = '<p class="empty-msg" style="grid-column:1/-1">Nenhuma partitura com esses filtros.</p>';
+  }
 
+  const esc = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   for (const item of filtered) {
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
-      <span class="fav-star">${item.favorite ? '⭐' : ''}</span>
+      <button type="button" class="fav-star" aria-label="Favoritar">${item.favorite ? '⭐' : '☆'}</button>
       <img src="${item.image}">
-      <div class="card-label">${item.title}${item.artist ? ' - ' + item.artist : ''}</div>
-      <div class="card-tag">${item.tag ? item.tag + ' · ' : ''}${item.status}</div>`;
-    card.onclick = (e) => Viewer.open(filtered, filtered.indexOf(item));
-    card.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(item); };
+      <div class="card-label">${esc(item.title)}${item.artist ? ' - ' + esc(item.artist) : ''}</div>
+      <div class="card-tag">${item.tag ? esc(item.tag) + ' · ' : ''}${esc(item.status)}</div>`;
+    card.querySelector('.fav-star').onclick = async (e) => {
+      e.stopPropagation();
+      await Library.toggleFavorite(item.id);
+      renderLibrary();
+    };
+    card.onclick = () => Viewer.open(filtered, filtered.indexOf(item));
     grid.appendChild(card);
   }
 }
 
-function showItemMenu(item) {
-  const fav = confirm(`"${item.title}"\n\nOK = favoritar/desfavoritar\nCancelar = apagar da biblioteca`);
-  if (fav) {
-    Library.toggleFavorite(item.id).then(renderLibrary);
-  } else if (confirm('Apagar esta partitura da biblioteca?')) {
-    DB.remove(item.id).then(renderLibrary);
+// ---- Favoritar / apagar / backup ----
+let favOnly = false;
+
+function setupItemActions() {
+  const favBtn = document.getElementById('lib-filter-fav');
+  favBtn.onclick = () => {
+    favOnly = !favOnly;
+    favBtn.classList.toggle('active', favOnly);
+    favBtn.setAttribute('aria-pressed', favOnly);
+    applyLibraryFilter();
+  };
+
+  document.getElementById('edit-fav').onclick = async () => {
+    const item = await Library.toggleFavorite(editingId);
+    setFavLabel(item.favorite);
+    const pos = Viewer.items.findIndex((i) => i.id === item.id);
+    if (pos >= 0) Viewer.items[pos] = item;
+    renderLibrary();
+  };
+
+  document.getElementById('edit-delete').onclick = async () => {
+    const item = libraryItems.find((i) => i.id === editingId);
+    if (!item || !confirm(`Apagar "${item.title}" da biblioteca?\n\nIsso não pode ser desfeito.`)) return;
+    await DB.remove(editingId);
+    document.getElementById('edit-modal').hidden = true;
+    Viewer.close();
+    renderLibrary();
+  };
+
+  setupBackup();
+}
+
+function setFavLabel(isFav) {
+  document.getElementById('edit-fav').textContent = isFav ? '⭐ Favorita' : '☆ Favoritar';
+}
+
+function setupMenu() {
+  const btn = document.getElementById('menu-btn');
+  const panel = document.getElementById('menu-panel');
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open);
+  };
+  btn.onclick = (e) => { e.stopPropagation(); setOpen(panel.hidden); };
+  panel.onclick = (e) => { if (e.target.closest('.menu-item')) setOpen(false); };
+  document.addEventListener('click', (e) => {
+    if (!panel.hidden && !panel.contains(e.target)) setOpen(false);
+  });
+}
+
+function setupBackup() {
+  setupMenu();
+  const status = document.getElementById('storage-status');
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().then((ok) => {
+      status.textContent = ok
+        ? '🔒 Armazenamento protegido neste aparelho.'
+        : '⚠️ O aparelho pode apagar os dados se faltar espaço. Salve um backup de vez em quando.';
+    }).catch(() => {});
   }
+
+  document.getElementById('backup-export').onclick = async () => {
+    const items = await DB.getAll();
+    if (!items.length) return alert('Não há partituras para salvar ainda.');
+    const parts = ['['];
+    items.forEach((it, i) => parts.push((i ? ',' : '') + JSON.stringify(it)));
+    parts.push(']');
+    const blob = new Blob(parts, { type: 'application/json' });
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `partitassos-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    alert(`Backup com ${items.length} partitura(s) salvo na pasta Downloads do aparelho.`);
+  };
+
+  document.getElementById('backup-import').onclick = () => document.getElementById('backup-input').click();
+  document.getElementById('backup-input').onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const incoming = JSON.parse(await file.text());
+      if (!Array.isArray(incoming)) throw new Error('formato');
+      const keyOf = (i) => `${i.savedAt}|${i.title}|${(i.image || '').length}`;
+      const existing = new Set((await DB.getAll()).map(keyOf));
+      let added = 0;
+      for (const it of incoming) {
+        if (!it || !it.image || !it.title || existing.has(keyOf(it))) continue;
+        const { id, ...rest } = it;
+        await DB.add(rest);
+        existing.add(keyOf(it));
+        added++;
+      }
+      alert(`${added} partitura(s) restaurada(s). ${incoming.length - added} já existiam ou eram inválidas.`);
+      renderLibrary();
+    } catch (err) {
+      alert('Esse arquivo não parece ser um backup do Partitassos.');
+    }
+  };
 }
 
 function setupVoiceSearch() {
@@ -318,6 +424,7 @@ function init() {
   };
 
   setupEditModal();
+  setupItemActions();
   for (const [selId, inputId] of [['save-tag-select', 'save-tag'], ['bulk-tag-select', 'bulk-tag'], ['edit-tag-select', 'edit-tag']]) {
     document.getElementById(selId).onchange = (e) => {
       const input = document.getElementById(inputId);

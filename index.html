@@ -14,6 +14,13 @@
 
 <header class="topbar">
   <h1>🎻 Partitassos</h1>
+  <button type="button" id="menu-btn" class="menu-btn" aria-label="Menu" aria-haspopup="true" aria-expanded="false">⋮</button>
+  <div id="menu-panel" class="menu-panel" hidden>
+    <button type="button" id="backup-export" class="menu-item">💾 Salvar backup</button>
+    <button type="button" id="backup-import" class="menu-item">📥 Restaurar backup</button>
+    <p id="storage-status" class="menu-note"></p>
+  </div>
+  <input type="file" id="backup-input" accept=".json,application/json" hidden>
 </header>
 
 <nav class="tabbar">
@@ -48,6 +55,7 @@
 <main id="view-library" class="view">
   <div class="lib-toolbar">
     <input id="lib-search" type="text" placeholder="Buscar na biblioteca...">
+    <button type="button" id="lib-filter-fav" class="btn fav-filter" aria-pressed="false">⭐ Só favoritas</button>
     <select id="lib-filter-tag"><option value="">Todas as pastas</option></select>
     <select id="lib-filter-status">
       <option value="">Todos os status</option>
@@ -130,6 +138,10 @@
       <option value="aprendendo">Aprendendo</option>
       <option value="aprendida">Aprendida</option>
     </select>
+    <div class="modal-actions">
+      <button id="edit-fav" class="btn">☆ Favoritar</button>
+      <button id="edit-delete" class="btn danger">🗑️ Apagar</button>
+    </div>
     <div class="modal-actions">
       <button id="edit-cancel" class="btn">Cancelar</button>
       <button id="edit-confirm" class="btn primary">Salvar</button>
