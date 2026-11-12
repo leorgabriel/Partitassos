@@ -10,11 +10,13 @@ export default async function handler(req, res) {
 
   const results = [];
 
+  let googleError = null;
   if (key && cx) {
     try {
       const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(term)}&searchType=image&num=10&safe=active`;
       const r = await fetch(url);
       const data = await r.json();
+      if (data.error) googleError = data.error.message;
       for (const item of data.items || []) {
         results.push({
           source: 'google',
@@ -25,8 +27,10 @@ export default async function handler(req, res) {
         });
       }
     } catch (e) {
-      // segue sem os resultados do Google se a busca falhar
+      googleError = e.message;
     }
+  } else {
+    googleError = 'missing GOOGLE_CSE_KEY or GOOGLE_CSE_CX env vars';
   }
 
   try {
@@ -60,5 +64,5 @@ export default async function handler(req, res) {
   });
 
   res.setHeader('Cache-Control', 's-maxage=3600');
-  res.status(200).json({ results: unique });
+  res.status(200).json({ results: unique, debug: { googleError } });
 }
