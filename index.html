@@ -26,17 +26,21 @@
     <input id="search-query" type="text" placeholder="Nome da música" autocomplete="off" required>
     <input id="search-artist" type="text" placeholder="Artista (opcional)" autocomplete="off">
     <div class="search-actions">
+      <button type="submit" class="btn big">Buscar</button>
       <button type="button" id="voice-btn" class="btn icon-btn" title="Buscar por voz">🎤</button>
     </div>
   </form>
+  <p id="usage-counter" class="usage-counter"></p>
+  <div id="search-status" class="status"></div>
+  <div id="search-results" class="grid"></div>
 
-  <p class="hint">Toque para abrir a busca num site e procurar a partitura:</p>
+  <p class="hint">Prefere procurar você mesmo? Abra a busca num site:</p>
   <div class="open-buttons">
-    <button type="button" id="open-musescore" class="btn big">🎼 Abrir no MuseScore</button>
-    <button type="button" id="open-google" class="btn big">🖼️ Abrir no Google Imagens</button>
+    <button type="button" id="open-musescore" class="btn">🎼 Abrir no MuseScore</button>
+    <button type="button" id="open-google" class="btn">🖼️ Abrir no Google Imagens</button>
   </div>
 
-  <p class="hint">Achou? Segure o dedo na imagem, toque em <b>"Baixar imagem"</b>, depois volte aqui:</p>
+  <p class="hint">Achou uma partitura fora do app? Segure o dedo na imagem, toque em <b>"Baixar imagem"</b>, depois volte aqui:</p>
   <button type="button" id="add-from-gallery" class="btn primary big">📷 Adicionar da Galeria</button>
   <input type="file" id="gallery-input" accept="image/*" multiple hidden>
 </main>
@@ -91,6 +95,7 @@
 </div>
 
 <script src="js/db.js"></script>
+<script src="js/search.js"></script>
 <script src="js/library.js"></script>
 <script src="js/viewer.js"></script>
 <script src="js/app.js"></script>

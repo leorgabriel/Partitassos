@@ -75,8 +75,11 @@ body {
 
 .status { text-align: center; color: #888; padding: 12px 0; min-height: 24px; }
 .hint { color: #777; margin: 16px 0 8px; }
-.open-buttons { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.open-buttons { display: flex; gap: 10px; margin-bottom: 8px; }
+.open-buttons .btn { flex: 1; font-size: 0.95rem; padding: 10px; }
 #add-from-gallery { width: 100%; }
+.usage-counter { text-align: center; font-size: 0.9rem; color: #999; margin: 4px 0 0; }
+.usage-counter.warn { color: #b33; font-weight: bold; }
 
 .grid {
   display: grid;

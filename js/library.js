@@ -1,6 +1,17 @@
 const Library = {
   async saveFromFile(file, meta) {
     const dataUrl = await blobToDataUrl(file);
+    return this._save(dataUrl, meta);
+  },
+
+  async saveFromResult(result, meta) {
+    const r = await fetch(`/api/image?url=${encodeURIComponent(result.fullImage)}`);
+    const data = await r.json();
+    if (!r.ok || !data.dataUrl) throw new Error('Não foi possível baixar essa imagem.');
+    return this._save(data.dataUrl, meta);
+  },
+
+  async _save(dataUrl, meta) {
     const item = {
       title: meta.title,
       artist: meta.artist,

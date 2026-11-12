@@ -1,4 +1,4 @@
-let fileQueue = [];
+let saveQueue = []; // itens pendentes de salvar: { type: 'file'|'result', data }
 let libraryItems = [];
 
 function switchTab(tab) {
@@ -14,12 +14,48 @@ function buildQuery() {
 }
 
 function openNextFromQueue() {
-  if (!fileQueue.length) return;
+  if (!saveQueue.length) return;
   document.getElementById('save-title').value = document.getElementById('search-query').value;
   document.getElementById('save-artist').value = document.getElementById('search-artist').value;
   document.getElementById('save-tag').value = '';
   document.getElementById('save-status').value = 'quero aprender';
   document.getElementById('save-modal').hidden = false;
+}
+
+function renderResults(results) {
+  const grid = document.getElementById('search-results');
+  grid.innerHTML = '';
+  if (!results.length) {
+    document.getElementById('search-status').textContent = 'Nenhuma partitura encontrada. Tente outro nome, ou use os botões abaixo.';
+    return;
+  }
+  document.getElementById('search-status').textContent = `${results.length} resultado(s) — toque para salvar`;
+  for (const r of results) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<img src="${r.thumbnail}" loading="lazy"><div class="card-label">${r.title || ''}</div>`;
+    card.onclick = () => {
+      saveQueue.push({ type: 'result', data: r });
+      openNextFromQueue();
+    };
+    grid.appendChild(card);
+  }
+}
+
+async function updateUsageCounter() {
+  const el = document.getElementById('usage-counter');
+  const usage = await Search.usage();
+  if (!usage || usage.limit == null) { el.textContent = ''; return; }
+  el.textContent = `Buscas usadas este mês: ${usage.used}/${usage.limit}`;
+  const left = usage.left ?? (usage.limit - usage.used);
+  el.classList.toggle('warn', left <= 10);
+  const submitBtn = document.querySelector('#search-form button[type="submit"]');
+  if (left <= 0) {
+    el.textContent += ' — limite atingido, use os botões abaixo';
+    submitBtn.disabled = true;
+  } else {
+    submitBtn.disabled = false;
+  }
 }
 
 async function renderLibrary() {
@@ -87,7 +123,20 @@ function init() {
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.onclick = () => switchTab(b.dataset.tab));
 
-  document.getElementById('search-form').onsubmit = (e) => e.preventDefault();
+  document.getElementById('search-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const query = document.getElementById('search-query').value.trim();
+    const artist = document.getElementById('search-artist').value.trim();
+    document.getElementById('search-status').textContent = 'Buscando...';
+    document.getElementById('search-results').innerHTML = '';
+    try {
+      const results = await Search.run(query, artist);
+      renderResults(results);
+    } catch (err) {
+      document.getElementById('search-status').textContent = err.message;
+    }
+    updateUsageCounter();
+  };
 
   document.getElementById('open-musescore').onclick = () => {
     const q = buildQuery();
@@ -105,18 +154,19 @@ function init() {
     document.getElementById('gallery-input').click();
   };
   document.getElementById('gallery-input').onchange = (e) => {
-    fileQueue = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []);
+    saveQueue.push(...files.map((file) => ({ type: 'file', data: file })));
     e.target.value = '';
     openNextFromQueue();
   };
 
   document.getElementById('save-cancel').onclick = () => {
-    fileQueue.shift();
+    saveQueue.shift();
     document.getElementById('save-modal').hidden = true;
     openNextFromQueue();
   };
   document.getElementById('save-confirm').onclick = async () => {
-    const file = fileQueue.shift();
+    const pending = saveQueue.shift();
     const meta = {
       title: document.getElementById('save-title').value.trim(),
       artist: document.getElementById('save-artist').value.trim(),
@@ -124,13 +174,20 @@ function init() {
       status: document.getElementById('save-status').value
     };
     document.getElementById('save-modal').hidden = true;
-    if (file) await Library.saveFromFile(file, meta);
-    if (fileQueue.length) {
+    try {
+      if (pending?.type === 'file') await Library.saveFromFile(pending.data, meta);
+      if (pending?.type === 'result') await Library.saveFromResult(pending.data, meta);
+    } catch (err) {
+      alert(err.message);
+    }
+    if (saveQueue.length) {
       openNextFromQueue();
     } else {
       switchTab('library');
     }
   };
+
+  updateUsageCounter();
 
   document.getElementById('lib-search').oninput = applyLibraryFilter;
   document.getElementById('lib-filter-tag').onchange = applyLibraryFilter;
