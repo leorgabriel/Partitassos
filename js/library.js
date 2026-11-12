@@ -36,12 +36,13 @@ const Library = {
     return items.sort((a, b) => b.savedAt - a.savedAt);
   },
 
-  filter(items, text, tag) {
+  filter(items, text, tag, status) {
     const t = (text || '').toLowerCase();
     return items.filter((i) => {
       const matchText = !t || i.title.toLowerCase().includes(t) || (i.artist || '').toLowerCase().includes(t);
       const matchTag = !tag || i.tag === tag;
-      return matchText && matchTag;
+      const matchStatus = !status || i.status === status;
+      return matchText && matchTag && matchStatus;
     });
   },
 

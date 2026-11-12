@@ -17,9 +17,31 @@ function openNextFromQueue() {
   if (!saveQueue.length) return;
   document.getElementById('save-title').value = document.getElementById('search-query').value;
   document.getElementById('save-artist').value = document.getElementById('search-artist').value;
-  document.getElementById('save-tag').value = '';
+  fillTagSelect();
   document.getElementById('save-status').value = 'quero aprender';
   document.getElementById('save-modal').hidden = false;
+}
+
+const NEW_TAG = '__new__';
+function fillTagSelect() {
+  const sel = document.getElementById('save-tag-select');
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  sel.innerHTML = '<option value="">Sem pasta</option>' +
+    Library.allTags(libraryItems).map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('') +
+    `<option value="${NEW_TAG}">➕ Criar nova pasta...</option>`;
+  sel.value = '';
+  const input = document.getElementById('save-tag');
+  input.value = '';
+  input.hidden = true;
+}
+
+let previewResult = null;
+function openPreview(r) {
+  previewResult = r;
+  const img = document.getElementById('preview-img');
+  img.onerror = () => { if (img.src !== r.thumbnail) img.src = r.thumbnail; };
+  img.src = r.fullImage || r.thumbnail;
+  document.getElementById('preview-modal').hidden = false;
 }
 
 function renderResults(results) {
@@ -29,15 +51,12 @@ function renderResults(results) {
     document.getElementById('search-status').textContent = 'Nenhuma partitura encontrada. Tente outro nome, ou use os botões abaixo.';
     return;
   }
-  document.getElementById('search-status').textContent = `${results.length} resultado(s) — toque para salvar`;
+  document.getElementById('search-status').textContent = `${results.length} resultado(s) — toque para ampliar`;
   for (const r of results) {
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `<img src="${r.thumbnail}" loading="lazy"><div class="card-label">${r.title || ''}</div>`;
-    card.onclick = () => {
-      saveQueue.push({ type: 'result', data: r });
-      openNextFromQueue();
-    };
+    card.onclick = () => openPreview(r);
     grid.appendChild(card);
   }
 }
@@ -71,7 +90,8 @@ async function renderLibrary() {
 function applyLibraryFilter() {
   const text = document.getElementById('lib-search').value;
   const tag = document.getElementById('lib-filter-tag').value;
-  const filtered = Library.filter(libraryItems, text, tag);
+  const status = document.getElementById('lib-filter-status').value;
+  const filtered = Library.filter(libraryItems, text, tag, status);
   const grid = document.getElementById('library-results');
   grid.innerHTML = '';
   document.getElementById('library-empty').hidden = libraryItems.length > 0;
@@ -83,7 +103,7 @@ function applyLibraryFilter() {
       <span class="fav-star">${item.favorite ? '⭐' : ''}</span>
       <img src="${item.image}">
       <div class="card-label">${item.title}${item.artist ? ' - ' + item.artist : ''}</div>
-      <div class="card-tag">${item.tag || item.status}</div>`;
+      <div class="card-tag">${item.tag ? item.tag + ' · ' : ''}${item.status}</div>`;
     card.onclick = (e) => Viewer.open(item.image);
     card.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(item); };
     grid.appendChild(card);
@@ -160,6 +180,20 @@ function init() {
     openNextFromQueue();
   };
 
+  document.getElementById('save-tag-select').onchange = (e) => {
+    const input = document.getElementById('save-tag');
+    input.hidden = e.target.value !== NEW_TAG;
+    if (!input.hidden) input.focus();
+  };
+  document.getElementById('preview-cancel').onclick = () => {
+    document.getElementById('preview-modal').hidden = true;
+  };
+  document.getElementById('preview-save').onclick = () => {
+    document.getElementById('preview-modal').hidden = true;
+    saveQueue.push({ type: 'result', data: previewResult });
+    openNextFromQueue();
+  };
+
   document.getElementById('save-cancel').onclick = () => {
     saveQueue.shift();
     document.getElementById('save-modal').hidden = true;
@@ -170,7 +204,10 @@ function init() {
     const meta = {
       title: document.getElementById('save-title').value.trim(),
       artist: document.getElementById('save-artist').value.trim(),
-      tag: document.getElementById('save-tag').value.trim(),
+      tag: (() => {
+        const v = document.getElementById('save-tag-select').value;
+        return v === NEW_TAG ? document.getElementById('save-tag').value.trim() : v;
+      })(),
       status: document.getElementById('save-status').value
     };
     document.getElementById('save-modal').hidden = true;
@@ -191,6 +228,8 @@ function init() {
 
   document.getElementById('lib-search').oninput = applyLibraryFilter;
   document.getElementById('lib-filter-tag').onchange = applyLibraryFilter;
+  document.getElementById('lib-filter-status').onchange = applyLibraryFilter;
+  Library.getAll().then((items) => { libraryItems = items; });
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});

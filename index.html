@@ -49,6 +49,12 @@
   <div class="lib-toolbar">
     <input id="lib-search" type="text" placeholder="Buscar na biblioteca...">
     <select id="lib-filter-tag"><option value="">Todas as pastas</option></select>
+    <select id="lib-filter-status">
+      <option value="">Todos os status</option>
+      <option value="quero aprender">Quero aprender</option>
+      <option value="aprendendo">Aprendendo</option>
+      <option value="aprendida">Aprendida</option>
+    </select>
   </div>
   <div id="library-results" class="grid"></div>
   <p id="library-empty" class="empty-msg" hidden>Nenhuma partitura salva ainda. Vá em "Buscar" para adicionar.</p>
@@ -71,6 +77,16 @@
   </div>
 </div>
 
+<div id="preview-modal" class="modal" hidden>
+  <div class="modal-box preview-box">
+    <div class="preview-img-wrap"><img id="preview-img" src="" alt="Prévia da partitura"></div>
+    <div class="modal-actions">
+      <button id="preview-cancel" class="btn">Voltar</button>
+      <button id="preview-save" class="btn primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div id="save-modal" class="modal" hidden>
   <div class="modal-box">
     <h2>Salvar partitura</h2>
@@ -79,8 +95,8 @@
     <label>Artista</label>
     <input id="save-artist" type="text">
     <label>Pasta/Tag</label>
-    <input id="save-tag" type="text" placeholder="ex: Favoritas do papai" list="tag-options">
-    <datalist id="tag-options"></datalist>
+    <select id="save-tag-select"></select>
+    <input id="save-tag" type="text" placeholder="Nome da nova pasta" hidden>
     <label>Status</label>
     <select id="save-status">
       <option value="quero aprender">Quero aprender</option>
