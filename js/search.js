@@ -1,7 +1,7 @@
 // Ponto único de configuração: aponte para a função serverless publicada
 // (ex: Vercel). Em desenvolvimento local sem deploy, deixe vazio — a busca
 // mostrará um aviso explicando como configurar.
-const SEARCH_API_URL = 'https://partitassos-ggliq90yt-leo-cfe5.vercel.app/api/search';
+const SEARCH_API_URL = 'https://partitassos.vercel.app/api/search';
 
 const Search = {
   async run(query, artist) {
