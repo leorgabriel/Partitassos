@@ -1,4 +1,4 @@
-let pendingResult = null;
+let fileQueue = [];
 let libraryItems = [];
 
 function switchTab(tab) {
@@ -7,25 +7,14 @@ function switchTab(tab) {
   if (tab === 'library') renderLibrary();
 }
 
-function renderResults(results) {
-  const grid = document.getElementById('search-results');
-  grid.innerHTML = '';
-  if (!results.length) {
-    document.getElementById('search-status').textContent = 'Nenhuma partitura encontrada. Tente outro nome.';
-    return;
-  }
-  document.getElementById('search-status').textContent = `${results.length} resultado(s)`;
-  for (const r of results) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<img src="${r.thumbnail}" loading="lazy"><div class="card-label">${r.title || ''}</div><div class="card-tag">${r.source}</div>`;
-    card.onclick = () => openSaveModal(r);
-    grid.appendChild(card);
-  }
+function buildQuery() {
+  const query = document.getElementById('search-query').value.trim();
+  const artist = document.getElementById('search-artist').value.trim();
+  return artist ? `${query} ${artist}` : query;
 }
 
-function openSaveModal(result) {
-  pendingResult = result;
+function openNextFromQueue() {
+  if (!fileQueue.length) return;
   document.getElementById('save-title').value = document.getElementById('search-query').value;
   document.getElementById('save-artist').value = document.getElementById('search-artist').value;
   document.getElementById('save-tag').value = '';
@@ -98,22 +87,36 @@ function init() {
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.onclick = () => switchTab(b.dataset.tab));
 
-  document.getElementById('search-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const query = document.getElementById('search-query').value.trim();
-    const artist = document.getElementById('search-artist').value.trim();
-    document.getElementById('search-status').textContent = 'Buscando...';
-    document.getElementById('search-results').innerHTML = '';
-    try {
-      const results = await Search.run(query, artist);
-      renderResults(results);
-    } catch (err) {
-      document.getElementById('search-status').textContent = err.message;
-    }
+  document.getElementById('search-form').onsubmit = (e) => e.preventDefault();
+
+  document.getElementById('open-musescore').onclick = () => {
+    const q = buildQuery();
+    if (!q) return alert('Digite o nome da música primeiro.');
+    window.open(`https://musescore.com/sheetmusic?text=${encodeURIComponent(q)}`, '_blank');
   };
 
-  document.getElementById('save-cancel').onclick = () => { document.getElementById('save-modal').hidden = true; };
+  document.getElementById('open-google').onclick = () => {
+    const q = buildQuery();
+    if (!q) return alert('Digite o nome da música primeiro.');
+    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent('partitura ' + q)}`, '_blank');
+  };
+
+  document.getElementById('add-from-gallery').onclick = () => {
+    document.getElementById('gallery-input').click();
+  };
+  document.getElementById('gallery-input').onchange = (e) => {
+    fileQueue = Array.from(e.target.files || []);
+    e.target.value = '';
+    openNextFromQueue();
+  };
+
+  document.getElementById('save-cancel').onclick = () => {
+    fileQueue.shift();
+    document.getElementById('save-modal').hidden = true;
+    openNextFromQueue();
+  };
   document.getElementById('save-confirm').onclick = async () => {
+    const file = fileQueue.shift();
     const meta = {
       title: document.getElementById('save-title').value.trim(),
       artist: document.getElementById('save-artist').value.trim(),
@@ -121,8 +124,12 @@ function init() {
       status: document.getElementById('save-status').value
     };
     document.getElementById('save-modal').hidden = true;
-    await Library.saveFromResult(pendingResult, meta);
-    switchTab('library');
+    if (file) await Library.saveFromFile(file, meta);
+    if (fileQueue.length) {
+      openNextFromQueue();
+    } else {
+      switchTab('library');
+    }
   };
 
   document.getElementById('lib-search').oninput = applyLibraryFilter;

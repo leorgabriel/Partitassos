@@ -1,16 +1,6 @@
 const Library = {
-  async saveFromResult(result, meta) {
-    let dataUrl = result.fullImage;
-    try {
-      const imgApi = SEARCH_API_URL ? SEARCH_API_URL.replace('/search', '/image') : '';
-      const src = imgApi ? `${imgApi}?url=${encodeURIComponent(result.fullImage)}` : result.fullImage;
-      const resp = await fetch(src);
-      const blob = await resp.blob();
-      dataUrl = await blobToDataUrl(blob);
-    } catch (e) {
-      // se o proxy falhar, guarda só a URL original (vai depender de internet pra ver depois)
-    }
-
+  async saveFromFile(file, meta) {
+    const dataUrl = await blobToDataUrl(file);
     const item = {
       title: meta.title,
       artist: meta.artist,
@@ -18,8 +8,7 @@ const Library = {
       status: meta.status,
       favorite: false,
       savedAt: Date.now(),
-      image: dataUrl,
-      sourceUrl: result.pageUrl
+      image: dataUrl
     };
     return DB.add(item);
   },

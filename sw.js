@@ -1,10 +1,9 @@
-const CACHE = 'partitassos-v1';
+const CACHE = 'partitassos-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './js/db.js',
-  './js/search.js',
   './js/library.js',
   './js/viewer.js',
   './js/app.js',
