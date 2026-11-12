@@ -10,8 +10,10 @@ const Viewer = {
     this.scrollArea = document.getElementById('viewer-scroll-area');
     this.img = document.getElementById('viewer-img');
 
+    this.setupSwipe();
     document.getElementById('viewer-close').onclick = () => this.close();
     document.getElementById('viewer-download').onclick = () => this.download();
+    document.getElementById('viewer-edit').onclick = () => openEditModal(this.itemId);
     document.getElementById('viewer-theme').onclick = () => this.toggleTheme();
     document.getElementById('viewer-scroll').onclick = () => this.toggleAutoScroll();
     document.getElementById('viewer-speed').oninput = () => {}; // lido direto no loop
@@ -32,10 +34,59 @@ const Viewer = {
     setTimeout(() => { btn.textContent = '💾'; }, 1500);
   },
 
-  open(imageSrc, title) {
-    this.title = title || '';
-    this.img.src = imageSrc;
+  items: [],
+  index: 0,
+
+  open(items, index) {
+    this.items = items;
     this.el.hidden = false;
+    this.show(index);
+  },
+
+  show(index) {
+    const item = this.items[index];
+    if (!item) return;
+    this.index = index;
+    this.title = item.title || '';
+    this.itemId = item.id;
+    this.img.src = item.image;
+    this.scrollArea.scrollTop = 0;
+    document.getElementById('viewer-counter').textContent = `${index + 1} / ${this.items.length}`;
+    document.getElementById('viewer-prev').hidden = index <= 0;
+    document.getElementById('viewer-next').hidden = index >= this.items.length - 1;
+  },
+
+  go(delta) {
+    const next = this.index + delta;
+    if (next < 0 || next >= this.items.length) return;
+    this.show(next);
+  },
+
+  setupSwipe() {
+    document.getElementById('viewer-prev').onclick = () => this.go(-1);
+    document.getElementById('viewer-next').onclick = () => this.go(1);
+    document.addEventListener('keydown', (e) => {
+      if (this.el.hidden) return;
+      if (e.key === 'ArrowLeft') this.go(-1);
+      if (e.key === 'ArrowRight') this.go(1);
+    });
+
+    let start = null;
+    this.scrollArea.addEventListener('touchstart', (e) => {
+      const zoomed = window.visualViewport && window.visualViewport.scale > 1.05;
+      start = (e.touches.length === 1 && !zoomed)
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null;
+    }, { passive: true });
+    this.scrollArea.addEventListener('touchend', (e) => {
+      if (!start || e.changedTouches.length !== 1) { start = null; return; }
+      const dx = e.changedTouches[0].clientX - start.x;
+      const dy = e.changedTouches[0].clientY - start.y;
+      const fast = Date.now() - start.t < 600;
+      start = null;
+      if (fast && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) {
+        this.go(dx < 0 ? 1 : -1);
+      }
+    }, { passive: true });
   },
 
   close() {

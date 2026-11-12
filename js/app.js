@@ -35,6 +35,54 @@ function fillTagSelect(selId = 'save-tag-select', inputId = 'save-tag') {
   input.hidden = true;
 }
 
+// ---- Edição de partitura salva ----
+let editingId = null;
+function openEditModal(id) {
+  const item = libraryItems.find((i) => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('edit-title').value = item.title || '';
+  document.getElementById('edit-artist').value = item.artist || '';
+  fillTagSelect('edit-tag-select', 'edit-tag');
+  const sel = document.getElementById('edit-tag-select');
+  if (item.tag) {
+    if (![...sel.options].some((o) => o.value === item.tag)) {
+      const opt = new Option(item.tag, item.tag);
+      sel.insertBefore(opt, sel.options[sel.options.length - 1]);
+    }
+    sel.value = item.tag;
+  }
+  document.getElementById('edit-status').value = item.status || 'quero aprender';
+  document.getElementById('edit-modal').hidden = false;
+}
+
+function setupEditModal() {
+  document.getElementById('edit-cancel').onclick = () => {
+    document.getElementById('edit-modal').hidden = true;
+  };
+  document.getElementById('edit-confirm').onclick = async () => {
+    const title = document.getElementById('edit-title').value.trim();
+    if (!title) return alert('O nome da música não pode ficar vazio.');
+    const v = document.getElementById('edit-tag-select').value;
+    const tag = v === NEW_TAG ? document.getElementById('edit-tag').value.trim() : v;
+    try {
+      const item = await DB.get(editingId);
+      item.title = title;
+      item.artist = document.getElementById('edit-artist').value.trim();
+      item.tag = tag;
+      item.status = document.getElementById('edit-status').value;
+      await DB.update(item);
+      Viewer.title = item.title;
+      const pos = Viewer.items.findIndex((i) => i.id === item.id);
+      if (pos >= 0) Viewer.items[pos] = item;
+    } catch (err) {
+      return alert('Não foi possível salvar as alterações.');
+    }
+    document.getElementById('edit-modal').hidden = true;
+    renderLibrary();
+  };
+}
+
 // ---- Importação em massa ----
 let bulkFiles = [];
 function openBulkModal(files) {
@@ -192,7 +240,7 @@ function applyLibraryFilter() {
       <img src="${item.image}">
       <div class="card-label">${item.title}${item.artist ? ' - ' + item.artist : ''}</div>
       <div class="card-tag">${item.tag ? item.tag + ' · ' : ''}${item.status}</div>`;
-    card.onclick = (e) => Viewer.open(item.image, item.title);
+    card.onclick = (e) => Viewer.open(filtered, filtered.indexOf(item));
     card.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(item); };
     grid.appendChild(card);
   }
@@ -269,7 +317,8 @@ function init() {
     openNextFromQueue();
   };
 
-  for (const [selId, inputId] of [['save-tag-select', 'save-tag'], ['bulk-tag-select', 'bulk-tag']]) {
+  setupEditModal();
+  for (const [selId, inputId] of [['save-tag-select', 'save-tag'], ['bulk-tag-select', 'bulk-tag'], ['edit-tag-select', 'edit-tag']]) {
     document.getElementById(selId).onchange = (e) => {
       const input = document.getElementById(inputId);
       input.hidden = e.target.value !== NEW_TAG;

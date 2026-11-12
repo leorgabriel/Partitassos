@@ -141,6 +141,17 @@ body {
 .viewer-top-actions { display: flex; gap: 8px; }
 .viewer-scroll-area { flex: 1; overflow: auto; text-align: center; touch-action: pinch-zoom pan-y; }
 .viewer-scroll-area img { width: 100%; max-width: none; }
+.viewer-counter { align-self: center; color: #fff; font-size: 1rem; }
+.viewer.theme-light .viewer-counter { color: #000; }
+.viewer-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 52px; height: 80px; border: none; font-size: 2.6rem; line-height: 1;
+  background: rgba(0,0,0,0.35); color: #fff; cursor: pointer; opacity: .6;
+  -webkit-tap-highlight-color: transparent;
+}
+.viewer-nav:active { opacity: 1; }
+.viewer-nav.prev { left: 0; border-radius: 0 14px 14px 0; }
+.viewer-nav.next { right: 0; border-radius: 14px 0 0 14px; }
 .viewer-speed {
   position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
   background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 20px;

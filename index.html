@@ -63,8 +63,10 @@
 <div id="viewer" class="viewer" hidden>
   <div class="viewer-top">
     <button id="viewer-close" class="btn icon-btn">✕</button>
+    <span id="viewer-counter" class="viewer-counter"></span>
     <div class="viewer-top-actions">
       <button id="viewer-download" class="btn icon-btn" title="Salvar na galeria do tablet">💾</button>
+      <button id="viewer-edit" class="btn icon-btn" title="Editar partitura">⚙️</button>
       <button id="viewer-theme" class="btn icon-btn" title="Alternar fundo">🌙</button>
       <button id="viewer-scroll" class="btn icon-btn" title="Rolagem automática">▶️</button>
     </div>
@@ -72,6 +74,8 @@
   <div class="viewer-scroll-area" id="viewer-scroll-area">
     <img id="viewer-img" src="" alt="Partitura">
   </div>
+  <button id="viewer-prev" class="viewer-nav prev" aria-label="Partitura anterior">‹</button>
+  <button id="viewer-next" class="viewer-nav next" aria-label="Próxima partitura">›</button>
   <div class="viewer-speed" id="viewer-speed-wrap" hidden>
     <label>Velocidade</label>
     <input type="range" id="viewer-speed" min="1" max="10" value="4">
@@ -106,6 +110,29 @@
     <div class="modal-actions">
       <button id="bulk-cancel" class="btn">Cancelar</button>
       <button id="bulk-confirm" class="btn primary">Importar</button>
+    </div>
+  </div>
+</div>
+
+<div id="edit-modal" class="modal" hidden>
+  <div class="modal-box">
+    <h2>Editar partitura</h2>
+    <label>Música</label>
+    <input id="edit-title" type="text" placeholder=" ">
+    <label>Artista</label>
+    <input id="edit-artist" type="text" placeholder=" ">
+    <label>Pasta/Tag</label>
+    <select id="edit-tag-select"></select>
+    <input id="edit-tag" type="text" placeholder="Nome da nova pasta" hidden>
+    <label>Status</label>
+    <select id="edit-status">
+      <option value="quero aprender">Quero aprender</option>
+      <option value="aprendendo">Aprendendo</option>
+      <option value="aprendida">Aprendida</option>
+    </select>
+    <div class="modal-actions">
+      <button id="edit-cancel" class="btn">Cancelar</button>
+      <button id="edit-confirm" class="btn primary">Salvar</button>
     </div>
   </div>
 </div>
