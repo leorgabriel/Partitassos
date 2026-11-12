@@ -1,36 +1,38 @@
-// Serverless function (Vercel). Mantém a API key do Google CSE fora do cliente
-// e junta resultados do Google Imagens com links de busca do MuseScore.
+// Serverless function (Vercel). Junta resultados de imagens do Bing com
+// links de busca do MuseScore — sem precisar de nenhuma chave de API.
 export default async function handler(req, res) {
   const q = (req.query.q || '').trim();
   if (!q) return res.status(400).json({ error: 'missing q' });
 
-  const key = process.env.GOOGLE_CSE_KEY;
-  const cx = process.env.GOOGLE_CSE_CX;
   const term = `partitura ${q}`;
-
   const results = [];
 
-  let googleError = null;
-  if (key && cx) {
-    try {
-      const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(term)}&searchType=image&num=10&safe=active`;
-      const r = await fetch(url);
-      const data = await r.json();
-      if (data.error) googleError = data.error.message;
-      for (const item of data.items || []) {
+  try {
+    const bingUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(term)}&form=HDRSC2`;
+    const r = await fetch(bingUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const html = await r.text();
+    const re = /<a[^>]+class="iusc"[^>]+m="([^"]+)"/g;
+    let m;
+    let count = 0;
+    while ((m = re.exec(html)) && count < 12) {
+      const json = m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      try {
+        const data = JSON.parse(json);
+        if (!data.murl) continue;
         results.push({
-          source: 'google',
-          title: item.title,
-          thumbnail: item.image?.thumbnailLink || item.link,
-          fullImage: item.link,
-          pageUrl: item.image?.contextLink || item.link
+          source: 'bing',
+          title: data.t || q,
+          thumbnail: data.turl || data.murl,
+          fullImage: data.murl,
+          pageUrl: data.purl || data.murl
         });
+        count++;
+      } catch (_) {
+        // ignora item malformado e segue pro próximo
       }
-    } catch (e) {
-      googleError = e.message;
     }
-  } else {
-    googleError = 'missing GOOGLE_CSE_KEY or GOOGLE_CSE_CX env vars';
+  } catch (e) {
+    // segue sem os resultados do Bing se a busca falhar
   }
 
   try {
@@ -64,5 +66,5 @@ export default async function handler(req, res) {
   });
 
   res.setHeader('Cache-Control', 's-maxage=3600');
-  res.status(200).json({ results: unique, debug: { googleError } });
+  res.status(200).json({ results: unique });
 }
